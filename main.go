@@ -17,7 +17,7 @@ import (
 type User struct {
 	gorm.Model
 	Name           string
-	Email          string
+	Email          string `gorm:"type:varchar(100);unique_index"`
 	HashedPassword string
 }
 
