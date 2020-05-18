@@ -26,6 +26,12 @@ type Credentials struct {
 	Email    string `json:"email"`
 }
 
+type SignupParams struct {
+	Password string `json:"password"`
+	Email    string `json:"email"`
+	Name     string `json:"name"`
+}
+
 func hashAndSalt(pwd []byte) string {
 	hash, err := bcrypt.GenerateFromPassword(pwd, bcrypt.MinCost)
 	if err != nil {
@@ -91,6 +97,22 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func SignupHandler(w http.ResponseWriter, r *http.Request) {
+	db, _ := gorm.Open("sqlite3", "test.db")
+	fmt.Println("Signup")
+
+	params := &SignupParams{}
+	err := json.NewDecoder(r.Body).Decode(params)
+	if err != nil {
+		fmt.Println("Failed")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	user := User{Name: params.Name, Email: params.Email, HashedPassword: hashAndSalt([]byte(params.Password))}
+	db.NewRecord(user)
+	db.Create(&user)
+}
+
 func SetupDatabase() {
 
 	db, err := gorm.Open("sqlite3", "test.db")
@@ -101,17 +123,14 @@ func SetupDatabase() {
 
 	// Migrate the schema
 	db.AutoMigrate(&User{})
-
-	// Create
-	db.Create(&User{Name: "Aboobacker", Email: "aboobacker@gmail.com", HashedPassword: hashAndSalt([]byte("password"))})
-
 }
 
 func main() {
 	SetupDatabase()
 	r := mux.NewRouter().StrictSlash(true)
 	r.HandleFunc("/", HomeHandler)
-	r.HandleFunc("/login", LoginHandler)
+	r.HandleFunc("/login", LoginHandler).Methods("POST")
+	r.HandleFunc("/signup", SignupHandler).Methods("POST")
 	http.Handle("/", r)
 	http.ListenAndServe(":8081", r)
 }
